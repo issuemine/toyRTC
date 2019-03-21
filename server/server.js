@@ -1,9 +1,9 @@
 "use strict";
 
-var webSocketServer = require('websocket').server;
-var http = require('http');
+let webSocketServer = require('websocket').server;
+let http = require('http');
 
-var server = http.createServer(function (request, response) {});
+let server = http.createServer(function (request, response) {});
 
 //8080 포트로 서버 개통
 server.listen(8080, function () {});
@@ -13,10 +13,10 @@ let wsServer = new webSocketServer({ httpServer: server });
 let chattingRooms = {}; //채팅방의 커넥션을 관리 객체
 
 wsServer.on('request', function (request) {
-    var connection = request.accept(null, request.origin);
+    let connection = request.accept(null, request.origin);
 
     connection.on('message', function (message) {
-      var data = {};
+      let data = {};
       try {
         if (message.type === 'utf8') {
           data = JSON.parse(message.utf8Data); //client에서 JSON을 문자열 형태로 변환시켜 보내주므로, JSON형태로 다시 변환
@@ -107,7 +107,7 @@ function handleAnswer(connection, data) {
   var conn;
   chattingRooms[data.chattingRoomId].forEach(function (chat) { //채팅방에 접속한 자신을 제외한 peer들에게 answer을 보낸다.
     if (chat.id != data.id) {
-      sendTo(conn, {
+      sendTo(chat.connection, {
         type : 'answer',
         answer : data.answer //answer를 보낸 peer(기존의 채팅방에 있는)의 description을 기존의 peer에게 전달
       });
@@ -123,7 +123,7 @@ function handleOffer(connection, data) {
   var conn;
   chattingRooms[data.chattingRoomId].forEach(function (chat) { //채팅방에 접속한 자신을 제외한 peer들에게 offer를 보낸다.
     if (chat.id != data.id) {
-      sendTo(conn, {
+      sendTo(chat.connection, {
         type : 'offer',
         success : true,
         offer : data.offer //offer를 보낸 peer(채팅방에 들어온)의 description을 기존의 peer에게 전달
