@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>simple-webRTC</title>
+    <meta charset="utf-8">
+    <script src="http://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <style>
+      video { width: 300px; height: 300px; }
+    </style>
+  </head>
+  <body>
+    <div id="join_div">
+      <input type="text" id="chatting_room_id" required>
+      <button id="create_btn">Create</button>
+      <button id="join_btn">Join</button>
+    </div>
+
+    <div id="chatting_div" style="display: none;">
+      <div>
+        <video id="local_video" playsinline autoplay muted></video>
+      </div>
+      <div>
+        <button id="local_blind_btn">blind</button>
+      </div>
+      <div>
+        <video id="remote_video" playsinline autoplay></video>
+      </div>
+    </div>
+  </body>
+  <script src="client.js"></script>
+</html>
