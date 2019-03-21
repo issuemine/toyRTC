@@ -4,7 +4,7 @@
 let connection = new WebSocket('ws://localhost:8080');
 
 //id는 10000까지 랜덤으로 생성된다.
-let id = Math.floor(Math.random() * 10000) + 1;
+let id = generateId();
 
 
 connection.onerror = function(error) { //통신 접속에러시 에러 처리 이벤트 핸들러
@@ -73,7 +73,8 @@ createBtn.onclick = function(event) {
 joinBtn.onclick = function(event) {
   send({
     type : 'join',
-    chattingRoomId : chattingRoomIdInput.value
+    chattingRoomId : chattingRoomIdInput.value,
+    id : id
   });
 }
 
@@ -89,6 +90,11 @@ async function handleJoin(data) {
   if (data.success) {
     chattingRoomId = chattingRoomIdInput.value;
     await init(); //채팅방 접속시 설정 초기화
+    
+    if (data.newId) { //중복된 id면 서버에서 중복 회피한 id로 변환시킨다.
+      console.log('change new Id');
+      id = data.newId;
+    }
 
     let peerInformations = data.peerInformations;
     for (let i = 0; i < data.numberOfPeer; i++) { //peer 개수만큼 connection을 만든다.
@@ -167,7 +173,7 @@ function send(message) { //server에 보낼 메시지를 JSON형식으로 바꿔
   connection.send(JSON.stringify(message));
 }
 
-function handleServerMessage(message) {
+function handleServerMessage(message) { //user에게 server에서 보낸 메시지를 노출시킨다.
   alert(message);
 }
 
@@ -233,7 +239,7 @@ function makeVideo(videoDivId, otherId, stream) {
   let remoteVideoDiv = document.createElement('div');
   remoteVideoDiv.setAttribute('id', otherId);
 
-  let remoteVideo = document.createElement('video')
+  let remoteVideo = document.createElement('video');
   remoteVideo.setAttribute('autoplay', '');
   remoteVideo.srcObject = stream;
   remoteVideoDiv.appendChild(remoteVideo);
@@ -245,4 +251,8 @@ function deleteVideo(videoDivId, otherId) {
   let videoDiv = document.getElementById(videoDivId);
   let remoteVideoDiv = document.getElementById(otherId);
   videoDiv.removeChild(remoteVideoDiv);
+}
+
+function generateId() {
+  return Math.floor(Math.random() * 10000) + 1;
 }
