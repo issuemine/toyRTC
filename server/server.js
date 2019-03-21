@@ -3,16 +3,16 @@
 let webSocketServer = require('websocket').server;
 let http = require('http');
 
-let server = http.createServer(function (request, response) {});
+let server = http.createServer(function(request, response) {});
 
 //8080 포트로 서버 개통
-server.listen(8080, function () {});
+server.listen(8080, function() {});
 
-let wsServer = new webSocketServer({ httpServer: server });
+let websocketServer = new webSocketServer({ httpServer: server });
 
 let chattingRooms = {}; //채팅방의 커넥션을 관리 객체
 
-wsServer.on('request', function (request) {
+websocketServer.on('request', function (request) {
     let connection = request.accept(null, request.origin);
 
     connection.on('message', function (message) {
@@ -55,12 +55,20 @@ wsServer.on('request', function (request) {
       if (chattingRoomId) { //채팅방에 접속한 사람이라면 connection을 찾아 삭제한다.
         for (let i in chattingRooms[chattingRoomId]) {
           let peer = chattingRooms[chattingRoomId][i];
-          if (peer.id === connection.id) { //채팅방의 id와 종료한 connection의 id가 같으면
+          if (peer.id === connection.id) { //채팅방의 id와 종료한 peer의 id가 같으면
             chattingRooms[chattingRoomId].splice(i, 1); //connection 삭제
           }
         }
 
-        if (chattingRooms[chattingRoomId].length === 0) { //채팅방에 connection이 0이면 채팅방을 삭제
+        for (let i in chattingRooms[chattingRoomId]) {
+          let peer = chattingRooms[chattingRoomId][i];
+          sendTo(peer.connection, { //client에 접속 종료 peer의 id를 알려준다.
+            type : 'leave',
+            otherId : connection.id
+          });
+        }
+
+        if (chattingRooms[chattingRoomId].length === 0) { //채팅방에 peer가 0이면 채팅방을 삭제
           delete chattingRooms[chattingRoomId];
         }
       }
@@ -90,9 +98,13 @@ function handleCreate(connection, data) {
 
 function handleJoin(connection, data) {
   if (chattingRooms[data.chattingRoomId]) {
+    let peerInformations = getPeerInformations(data.chattingRoomId); //새로운 참가자에게 보낼 채팅방 정보들
+
     sendTo(connection, {
       type : 'join',
-      success : true //채팅방 참가 실패
+      success : true, //채팅방 참가 실패
+      numberOfPeer : peerInformations.length, //peer들 수
+      peerInformations : peerInformations //peer들 정보
     });
   } else {
     sendTo(connection, {
@@ -103,42 +115,62 @@ function handleJoin(connection, data) {
   }
 }
 
-function handleAnswer(connection, data) {
-  var conn;
-  chattingRooms[data.chattingRoomId].forEach(function (chat) { //채팅방에 접속한 자신을 제외한 peer들에게 answer을 보낸다.
-    if (chat.id != data.id) {
-      sendTo(chat.connection, {
-        type : 'answer',
-        answer : data.answer //answer를 보낸 peer(기존의 채팅방에 있는)의 description을 기존의 peer에게 전달
-      });
-    }
-  });
-}
-
 function handleOffer(connection, data) {
   connection.chattingRoomId = data.chattingRoomId; //브라우저 종료시 connection 삭제를 위해 채팅방 이름을 저장
   connection.id = data.id; //브라우저 종료시 connection 삭제를 위해 id를 저장
-  chattingRooms[data.chattingRoomId].push({connection : connection, id : data.id}); //connection 저장(채팅방에 들어온 peer)
 
-  var conn;
-  chattingRooms[data.chattingRoomId].forEach(function (chat) { //채팅방에 접속한 자신을 제외한 peer들에게 offer를 보낸다.
-    if (chat.id != data.id) {
-      sendTo(chat.connection, {
-        type : 'offer',
-        success : true,
-        offer : data.offer //offer를 보낸 peer(채팅방에 들어온)의 description을 기존의 peer에게 전달
-      });
-    }
+  let isPeer = chattingRooms[data.chattingRoomId].find(function (chat) { //이미 존재하는 peer인지 찾는다.
+    return chat.id == data.id;
+  });
+
+  if (isPeer === null || isPeer === undefined) { //peer가 없다면, 처음 채팅방에 들어온 peer로 간주하여 connection을 저장한다.
+    chattingRooms[data.chattingRoomId].push({connection : connection, id : data.id}); //connection 저장(채팅방에 들어온 peer)
+  }
+
+
+  findPeer(data, function (connection, data) {
+    sendTo(connection, {
+      type : 'offer',
+      success : true,
+      offer : data.offer, //offer를 보낸 peer(채팅방에 들어온)의 description을 기존의 peer에게 전달
+      otherId : data.id //offer를 보낸 peer의 id
+    });
+  });
+}
+
+function handleAnswer(connection, data) {
+  findPeer(data, function (connection, data) {
+    sendTo(connection, {
+      type : 'answer',
+      answer : data.answer, //answer를 보낸 peer(기존의 채팅방에 있는)의 description을 기존의 peer에게 전달
+      otherId : data.id //answer를 보낸 peer의 id
+    });
   });
 }
 
 function handleCandidate(data) {
-  chattingRooms[data.chattingRoomId].forEach(function (chat) {
-    if (chat.id != data.id) { //채팅방에 참여한 peer들에게 ICE candidate를 보낸다.
-      sendTo(chat.connection, {
-          type : 'candidate',
-          candidate : data.candidate //ICE candidate
-      });
+  findPeer(data, function (connection, data) {
+    sendTo(connection, {
+      type : 'candidate',
+      candidate : data.candidate,
+      otherId : data.id
+    });
+  });
+}
+
+function getPeerInformations(chattingRoomId) {
+  let peersInformations = new Array();
+  for (let i in chattingRooms[chattingRoomId]) { //채팅방에 접속한 peer들의 id를 얻어온다.
+    let chatting = chattingRooms[chattingRoomId][i];
+    peersInformations.push({id : chatting.id});
+  }
+  return peersInformations;
+}
+
+function findPeer(data, callBack) { //채팅방에 접속해있는 peer를 id로 찾아주는 메소드이다.
+  chattingRooms[data.chattingRoomId].forEach(function(chat) {
+    if (chat.id === data.otherId) {
+      callBack(chat.connection, data);
     }
   });
 }

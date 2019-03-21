@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <script src="http://webrtc.github.io/adapter/adapter-latest.js"></script>
     <style>
-      video { width: 300px; height: 300px; }
+      video { width: 300px; height: 150px; }
     </style>
   </head>
   <body>
@@ -17,13 +17,7 @@
 
     <div id="chatting_div" style="display: none;">
       <div>
-        <video id="local_video" playsinline autoplay muted></video>
-      </div>
-      <div>
-        <button id="local_blind_btn">blind</button>
-      </div>
-      <div>
-        <video id="remote_video" playsinline autoplay></video>
+        <video id="local_video" autoplay muted></video>
       </div>
     </div>
   </body>
