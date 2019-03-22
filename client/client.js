@@ -1,7 +1,7 @@
 'use strict';
 
 //web socket 생성
-let connection = new WebSocket('ws://localhost:8080');
+let connection = new WebSocket('wss://hyobeom-toy.dongju.kim/websocket/');
 
 //id는 10000까지 랜덤으로 생성된다.
 let id = generateId();
@@ -90,7 +90,7 @@ async function handleJoin(data) {
   if (data.success) {
     chattingRoomId = chattingRoomIdInput.value;
     await init(); //채팅방 접속시 설정 초기화
-    
+
     if (data.newId) { //중복된 id면 서버에서 중복 회피한 id로 변환시킨다.
       console.log('change new Id');
       id = data.newId;

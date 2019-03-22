@@ -36,7 +36,9 @@ Signaling server를 이용하여 P2P 접속을 할 수 있게 해주는 client p
 
 ### 실행 방법
 * Client program이 실행되면 signaling server로 socket 통신을 시도합니다. client program 실행 전 signaling server를 먼저 구동시켜야합니다.
-* 실행 환경에 맞는 브라우저 혹은 디바이스로 client.html을 실행시킵니다.
+* client.js에서 구동시킨 signaling server의 주소와 포트를 입력합니다.
+<pre><code>let connection = new WebSocket('[wss 주소 | ws 주소 : 포트]');</code></pre>
+* 실행 환경에 맞는 브라우저 혹은 디바이스로 index.html을 실행시킵니다.
 
 ### 사용 방법
 해당 client program을 사용하기 위해서는 다음과 같이 사용법을 숙지 하셔야합니다.
