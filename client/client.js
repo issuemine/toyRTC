@@ -1,8 +1,8 @@
 'use strict';
 
 //web socket 생성
-let connection = new WebSocket('wss://hyobeom-toy.dongju.kim/websocket/');
-
+//let connection = new WebSocket('wss://hyobeom-toy.dongju.kim/websocket/');
+let connection = new WebSocket('ws:127.0.0.1:8080');
 //id는 10000까지 랜덤으로 생성된다.
 let id = generateId();
 
@@ -32,6 +32,9 @@ connection.onmessage = function(message) {
       break;
     case 'leave' :
       handleleave(data); //다른 peer가 종료시 connection과 화면에서 없애주는 처리
+      break;
+    case 'error' :
+      handleServerMessage(data.message);
       break;
     default :
       handleError(data.message); //위에 정의되어 있지 않는 type의 메시지
@@ -79,49 +82,42 @@ joinBtn.onclick = function(event) {
 }
 
 function handleCreate(data) { //채팅방 만들기 이벤트 후 결과를 받아 처리하는 함수
-  if (data.success) { //방 만들기가 성공한지 여부를 확인한다.
-    init(); //방 만들기가 성공하면 설정을 초기화
-  } else {
-    handleServerMessage(data.message); //방 만들기가 실패하면 실패한 이유가 server에서 message로 온다. message를 peer에서 알림
-  }
+  init(); //방 만들기가 성공하면 설정을 초기화
 }
 
 async function handleJoin(data) {
-  if (data.success) {
-    chattingRoomId = chattingRoomIdInput.value;
-    await init(); //채팅방 접속시 설정 초기화
+  chattingRoomId = chattingRoomIdInput.value;
 
-    if (data.newId) { //중복된 id면 서버에서 중복 회피한 id로 변환시킨다.
-      console.log('change new Id');
-      id = data.newId;
+  await init(); //채팅방 접속시 설정 초기화
+
+  if (data.newId) { //중복된 id면 서버에서 중복 회피한 id로 변환시킨다.
+    id = data.newId;
+  }
+
+  let peerInformations = data.peerInformations;
+
+  for (let i = 0; i < data.numberOfPeer; i++) { //peer 개수만큼 connection을 만든다.
+    let otherId = peerInformations[i].id; //offer를 보낼 다른 peer의 id
+    let newPeerConnection = makePeerConnection(localStream, otherId);
+
+    try {
+      const offer = await newPeerConnection.createOffer({
+        offerToReceiveAudio : true, //연결된 다른 peer에 오디오 전송 요청 제어 여부
+        offerToReceiveVideo : true  //연결된 다른 peer에 비디오 전송 요청 제어 여부
+      });
+
+      await newPeerConnection.setLocalDescription(offer); //offer로 만든 description을 local에 저장한다.
+
+      send({
+        type : 'offer', //offer를 보내는 message type
+        offer : offer, //offer로 보낼 description
+        chattingRoomId : chattingRoomId,
+        id : id, //사용자 id
+        otherId : otherId //offer를 받을 id
+      });
+    } catch (e) {
+      handleError(e);
     }
-
-    let peerInformations = data.peerInformations;
-    for (let i = 0; i < data.numberOfPeer; i++) { //peer 개수만큼 connection을 만든다.
-      let otherId = peerInformations[i].id; //offer를 보낼 다른 peer의 id
-      let newPeerConnection = makePeerConnection(localStream, otherId);
-
-      try {
-        const offer = await newPeerConnection.createOffer({
-          offerToReceiveAudio : true, //연결된 다른 peer에 오디오 전송 요청 제어 여부
-          offerToReceiveVideo : true  //연결된 다른 peer에 비디오 전송 요청 제어 여부
-        });
-
-        await newPeerConnection.setLocalDescription(offer); //offer로 만든 description을 local에 저장한다.
-
-        send({
-          type : 'offer', //offer를 보내는 message type
-          offer : offer, //offer로 보낼 description
-          chattingRoomId : chattingRoomId,
-          id : id, //사용자 id
-          otherId : otherId //offer를 받을 id
-        });
-      } catch (e) {
-        handleError(e);
-      }
-    }
-  } else {
-    handleServerMessage(data.message);
   }
 }
 

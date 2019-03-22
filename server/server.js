@@ -78,8 +78,7 @@ websocketServer.on('request', function (request) {
 function handleCreate(connection, data) {
   if (chattingRooms[data.chattingRoomId]) { //이미 존재하는 채팅방이면
     sendTo(connection, {
-      type : 'create',
-      success : false, //채팅방 만들기 실패
+      type : 'error',
       message : 'chatting room already exists' //이미 존재하는 채팅방이라는 메시지를 보낸다.
     });
   } else {
@@ -90,8 +89,7 @@ function handleCreate(connection, data) {
     chattingRooms[data.chattingRoomId].push({connection : connection, id : data.id}); //connection 저장(채팅방 만든 peer)
 
     sendTo(connection, {
-      type : 'create',
-      success : true //채팅방 만들기 성공
+      type : 'create'
     });
   }
 }
@@ -100,18 +98,16 @@ function handleJoin(connection, data) {
   if (chattingRooms[data.chattingRoomId]) {
     let peerInformations = getPeerInformations(data.chattingRoomId); //새로운 참가자에게 보낼 채팅방 정보들
 
-    let newId = changeDuplicatedId(data);
+    let newId = changeDuplicatedId(data); //접속하려는 id가 중복되면 새로운 id를 만들어 준다.
     sendTo(connection, {
       type : 'join',
-      success : true, //채팅방 참가 실패
       numberOfPeer : peerInformations.length, //peer들 수
       peerInformations : peerInformations, //peer들 정보
       newId : newId
     });
   } else {
     sendTo(connection, {
-      type : 'join',
-      success : false, //채팅방 참가 실패
+      type : 'error',
       message : 'chatting room doesn`t exists'
     });
   }
@@ -132,7 +128,6 @@ function handleOffer(connection, data) {
   findPeer(data, function (connection, data) {
     sendTo(connection, {
       type : 'offer',
-      success : true,
       offer : data.offer, //offer를 보낸 peer(채팅방에 들어온)의 description을 기존의 peer에게 전달
       otherId : data.id //offer를 보낸 peer의 id
     });
