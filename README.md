@@ -1,4 +1,4 @@
-WebRTC toy project
+WebRTC toy project v1.0.0
 =============
 
 WebRTC toy project입니다.
@@ -29,8 +29,8 @@ Client
 Signaling server를 이용하여 P2P 접속을 할 수 있게 해주는 client program입니다. P2P 접속에 성공하면,
 다른 peer와 영상 및 음성 데이터를 교환할 수 있습니다.
 
-### 실행 환경
-해당 client program은 다음의 실행 환경을 만족하여야 됩니다.
+### 개발 환경
+해당 client program은 개발 환경에서 제작되었습니다.
   - WebRTC 지원 브라우저(Chrome, Firefox, Opera)
   - ECMA script 2017 이상 지원 브라우저
 

@@ -3,9 +3,14 @@
 //web socket 생성
 //let connection = new WebSocket('wss://hyobeom-toy.dongju.kim/websocket/');
 let connection = new WebSocket('ws:127.0.0.1:8080');
-//id는 10000까지 랜덤으로 생성된다.
-let id = generateId();
 
+let id = 0;
+
+connection.onopen = function() {
+  send({
+    type : 'connect'
+  });
+}
 
 connection.onerror = function(error) { //통신 접속에러시 에러 처리 이벤트 핸들러
   handleError(error);
@@ -15,6 +20,9 @@ connection.onerror = function(error) { //통신 접속에러시 에러 처리 �
 connection.onmessage = function(message) {
   var data = JSON.parse(message.data);
   switch (data.type) {
+    case 'connect' :
+      handleConnect(data);
+      break;
     case 'create' :
       handleCreate(data); //처음 채팅방을 만들 경우 실패 성공여부에 따라 설정 초기화를 할지를 결정
       break;
@@ -81,6 +89,12 @@ joinBtn.onclick = function(event) {
   });
 }
 
+function handleConnect(data) {
+  id = data.id;
+  console.log(id);
+  makeChattingRoomList("chatting_room_list", data);
+}
+
 function handleCreate(data) { //채팅방 만들기 이벤트 후 결과를 받아 처리하는 함수
   init(); //방 만들기가 성공하면 설정을 초기화
 }
@@ -89,10 +103,6 @@ async function handleJoin(data) {
   chattingRoomId = chattingRoomIdInput.value;
 
   await init(); //채팅방 접속시 설정 초기화
-
-  if (data.newId) { //중복된 id면 서버에서 중복 회피한 id로 변환시킨다.
-    id = data.newId;
-  }
 
   let peerInformations = data.peerInformations;
 
@@ -197,7 +207,20 @@ function makePeerConnection(stream, otherId) {
   let newPeerConnection = new RTCPeerConnection(configuration); //peer와 connection 생성
   newPeerConnection.id = otherId;
 
-  stream.getTracks().forEach(track => newPeerConnection.addTrack(track, stream)); //연결된 peer에게 보낼 track 을 설정한다.
+  let cloneStream = stream.clone(); //각 peer에게 보낼 stream을 복사하여 사용
+  cloneStream.getTracks().forEach(track => {
+    if (track.kind === 'audio') { //오디오이면 mute
+      newPeerConnection.addTrack(track, cloneStream);
+      newPeerConnection.mute = function mute() { //mute시 동작할 함수 등록
+        track.enabled = !track.enabled;
+      }
+    } else if (track.kind === 'video') { //track이 video이면 blind
+      newPeerConnection.addTrack(track, cloneStream);
+      newPeerConnection.blind = function blind() { //blind시 동작할 함수 등록
+        track.enabled = !track.enabled;
+      }
+    }
+  }); //연결된 peer에게 보낼 track 을 설정한다.
 
   newPeerConnection.onaddstream  = function (event) { //연결된 다른 peerd에서 넘어온 stream을 연결시킨다.
     makeVideo('chatting_div', otherId, event.stream);
@@ -223,12 +246,79 @@ function getStream(stream) {
   localStream = stream;
 }
 
-function findPeer(data, callBack, callBackData) { //채팅방에 접속해있는 peer를 id로 찾아주는 메소드이다.
+function findPeer(data, callBack, callBackData) { //채팅방에 접속해있는 peer를 id로 찾아주는 함수이다.
   for (let i in peerConnections) {
     if (peerConnections[i].id === data.otherId) {
       callBack({index : i, data : callBackData});
     }
   }
+}
+
+function blind(peerId) {
+  let peerLocalStream = localStream;
+  controlTrack(peerId, peerLocalStream,
+    function(peerConnection, localStream) { //전체에게 blind상태를 하는 callback 함수
+      let videoTrack = localStream.getVideoTracks()[0];
+      videoTrack.enabled = !videoTrack.enabled;
+      peerConnection.blind();
+  },
+  function (peerConnection) { //특정 peer에게 blind상태를 하는 callback 함수
+    peerConnection.blind();
+  });
+
+  let blindBtn = event.target; //blind 버튼 객체
+  let isBlind = blindBtn.classList.toggle('blind'); //blind이 상태인지 아닌지 확인
+  if (isBlind) {
+    blindBtn.innerHTML = '화면 켜기';
+  } else {
+    blindBtn.innerHTML = '화면 끄기';
+  }
+}
+
+function mute(peerId) {
+  let peerLocalStream = localStream;
+  controlTrack(peerId, localStream,
+    function(peerConnection) { //전체에게 mute를 하는 callback 함수
+      let audioTrack = localStream.getAudioTracks()[0];
+      audioTrack.enabled = !audioTrack.enabled;
+      peerConnection.mute();
+  },
+  function (peerConnection) { //특정 peer에게 mute를 하는 함수
+    peerConnection.mute();
+  });
+
+  let muteBtn = event.target; //mute 버튼 객체
+  let isMute = muteBtn.classList.toggle('mute'); //mute 상태인지 아닌지 확인
+  if (isMute) {
+    muteBtn.innerHTML = '소리 켜기';
+  } else {
+    muteBtn.innerHTML = '소리 끄기';
+  }
+}
+
+function controlTrack(peerId, localStream, globalCallBack, peerCallBack) {
+  for (let i in peerConnections) {
+    let peerConnection = peerConnections[i];
+    if (peerId === 'global') { //전체 peer에게 control이면
+      globalCallBack(peerConnection, localStream);
+    } else {
+      if (peerConnection.id === peerId) { //특정 peer에게 control이면
+        peerCallBack(peerConnection, localStream);
+      }
+    }
+  }
+}
+
+function makeChattingRoomList(chattingRoomListRootId, data) {
+  let chattingRoomListRoot = document.getElementById(chattingRoomListRootId);
+
+  let chattingRoomInformations = data.chattingRoomInformations;
+
+  chattingRoomInformations.forEach(function (chattingRoom) {
+    let chattingRoomList = document.createElement('li');
+    chattingRoomList.innerHTML = '방 이름 : ' + chattingRoom.chattingRoomId + ' 접속자 수 : ' + chattingRoom.numberOfPeer;
+    chattingRoomListRoot.appendChild(chattingRoomList);
+  });
 }
 
 function makeVideo(videoDivId, otherId, stream) {
@@ -239,6 +329,16 @@ function makeVideo(videoDivId, otherId, stream) {
   remoteVideo.setAttribute('autoplay', '');
   remoteVideo.srcObject = stream;
   remoteVideoDiv.appendChild(remoteVideo);
+
+  let blindBtn = document.createElement('button');
+  blindBtn.innerHTML = '화면 끄기';
+  blindBtn.setAttribute('onclick', 'blind(' + otherId +')');
+  remoteVideoDiv.appendChild(blindBtn);
+
+  let muteBtn = document.createElement('button');
+  muteBtn.innerHTML = '소리 끄기';
+  muteBtn.setAttribute('onclick', 'mute(' + otherId +')');
+  remoteVideoDiv.appendChild(muteBtn);
 
   document.getElementById(videoDivId).appendChild(remoteVideoDiv);
 }

@@ -11,13 +11,18 @@
   <body>
     <div id="join_div">
       <input type="text" id="chatting_room_id" required>
-      <button id="create_btn">Create</button>
-      <button id="join_btn">Join</button>
+      <button id="create_btn">방 만들기</button>
+      <button id="join_btn">방 참여하기</button>
+      <div>
+        채팅방 목록
+        <ul id="chatting_room_list"></ul>
+      </div>
     </div>
-
     <div id="chatting_div" style="display: none;">
       <div>
         <video id="local_video" autoplay muted></video>
+        <button onClick="blind('global')">화면 끄기</button>
+        <button onClick="mute('global')">소리 끄기</button>
       </div>
     </div>
   </body>
