@@ -278,17 +278,17 @@ function makePeerConnection(stream, otherId) {
     }
   }); //연결된 peer에게 보낼 track 을 설정한다.
 
-  newPeerConnection.stop = function () { //peer connection 제거 함수 등록
+  newPeerConnection.stop = function() { //peer connection 제거 함수 등록
     cloneStream.getTracks().forEach(track => {
         track.stop();
     });
   }
 
-  newPeerConnection.onaddstream  = function (event) { //연결된 다른 peerd에서 넘어온 stream을 연결시킨다.
+  newPeerConnection.onaddstream  = function(event) { //연결된 다른 peerd에서 넘어온 stream을 연결시킨다.
     makeVideo('video_chatting_div', newPeerConnection, event.stream);
   }
 
-  newPeerConnection.onicecandidate = function (event) {
+  newPeerConnection.onicecandidate = function(event) {
     if (event.candidate) {
       send({
         type : 'candidate', //ICE candidate를 교환하는 message type
@@ -298,6 +298,10 @@ function makePeerConnection(stream, otherId) {
         otherId : otherId //ICE candidate를 받을 peer의 id
       });
     }
+  }
+
+  newPeerConnection.oniceconnectionstatechange = function(event) {
+    document.getElementById('state_span_' + newPeerConnection.id).innerHTML = newPeerConnection.iceConnectionState;
   }
 
   //out-band로 chatting channel을 연다.
@@ -419,8 +423,11 @@ function makeVideo(videoDivId, peerConnection, stream) {
   let idSpan = document.createElement('span');
   idSpan.innerHTML = peerId;
 
+  let stateSpan = document.createElement('span');
+  stateSpan.setAttribute('id', 'state_span_' + peerId);
+
   let remoteIdDiv = document.createElement('div');
-  remoteIdDiv.innerHTML = '상대방 ID : ' + idSpan.outerHTML;
+  remoteIdDiv.innerHTML = '상대방 ID : ' + idSpan.outerHTML + ' ' + stateSpan.outerHTML;
   remoteVideoDiv.appendChild(remoteIdDiv);
 
   let remoteVideo = document.createElement('video'); //remote 비디오 버튼

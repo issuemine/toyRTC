@@ -43,6 +43,7 @@ websocketServer.on('request', function (request) {
           handleAnswer(connection, data);
           break;
         case 'candidate' :
+          console.log(data);
           handleCandidate(data);
           break;
         case 'bitrate' :
@@ -133,7 +134,7 @@ function handleOffer(connection, data) {
     chattingRooms[data.chattingRoomId].push({connection : connection, id : data.id}); //connection 저장(채팅방에 들어온 peer)
   }
 
-  findPeer(data, function (connection, data) {
+  findPeer(data, function(connection, data) {
     sendTo(connection, {
       type : 'offer',
       offer : data.offer, //offer를 보낸 peer(채팅방에 들어온)의 description을 기존의 peer에게 전달
