@@ -13,7 +13,6 @@ let websocketServer = new webSocketServer({ httpServer: server });
 let peerId = 0; //id 시리얼 번호
 let chattingRooms = {}; //채팅방의 커넥션을 관리 객체
 
-
 websocketServer.on('request', function (request) {
     let connection = request.accept(null, request.origin);
 
@@ -46,6 +45,13 @@ websocketServer.on('request', function (request) {
         case 'candidate' :
           handleCandidate(data);
           break;
+        case 'bitrate' :
+          handleBitrate(data);
+          break;
+        case 'leave' :
+          delete connection.chattingRoomId; //connection에서 채팅방 이름을 없앤다.
+          handleLeave(data.chattingRoomId, data.id);
+          break;
         default : //위의 message type외에는 지원하지 않는다.
           sendTo(connection, {
             type : 'error',
@@ -58,32 +64,24 @@ websocketServer.on('request', function (request) {
     connection.on("close", function() {
       let chattingRoomId = connection.chattingRoomId;
       if (chattingRoomId) { //채팅방에 접속한 사람이 나간경우에는 채팅방에서 connection을 찾아 삭제한다.
-
-        for (let i in chattingRooms[chattingRoomId]) {
-          let peer = chattingRooms[chattingRoomId][i];
-          if (peer.id === connection.id) { //채팅방의 id와 종료한 peer의 id가 같으면
-            chattingRooms[chattingRoomId].splice(i, 1); //connection 삭제
-          } else { //종료한 peer가 아니면
-            sendTo(peer.connection, { //client에 접속 종료 peer의 id를 알려준다.
-              type : 'leave',
-              otherId : connection.id
-            });
-          }
-        }
-
-        if (chattingRooms[chattingRoomId].length === 0) { //채팅방에 peer가 0이면 채팅방을 삭제
-          delete chattingRooms[chattingRoomId];
-        }
+        delete connection.chattingRoomId; //connection에서 채팅방 이름을 없앤다.
+        handleLeave(chattingRoomId, connection.id);
       }
     });
 });
 
 function handleConnect(connection) { //접속한 peer에게 server에서 내려주는 초기 값
   let chattingRoomInformations = getChattingRoomInformations();
+  let id = connection.id;
+
+  if (id === null || id === undefined) { //이미 id가 있는 connection은 id를 새로 만들어주지 않는다.
+    id = generateId();
+  }
+
   sendTo(connection, {
     type : 'connect',
     chattingRoomInformations : chattingRoomInformations,
-    id : generateId()
+    id : id
   });
 }
 
@@ -164,6 +162,39 @@ function handleCandidate(data) {
   });
 }
 
+function handleBitrate(data) {
+  findPeer(data, function (connection, data) {
+    sendTo(connection, {
+      type : 'bitrate',
+      bitrate : data.bitrate,
+      otherId : data.id
+    });
+  });
+}
+
+function handleLeave(chattingRoomId, leavedPeerId) {
+  for (let i in chattingRooms[chattingRoomId]) {
+    let peerConnection = chattingRooms[chattingRoomId][i];
+    if (peerConnection.id !== leavedPeerId) { //채팅방의 id와 종료한 peer의 id가 같으면
+      sendTo(peerConnection.connection, { //client에 접속 종료 peer의 id를 알려준다.
+        type : 'leave',
+        otherId : leavedPeerId
+      });
+    }
+  }
+
+  for (let i in chattingRooms[chattingRoomId]) {
+    let peerConnection = chattingRooms[chattingRoomId][i];
+    if (peerConnection.id === leavedPeerId) { //채팅방의 id와 종료한 peer의 id가 같으면
+      chattingRooms[chattingRoomId].splice(i, 1); //connection 삭제
+    }
+  }
+
+  if (chattingRooms[chattingRoomId].length === 0) { //채팅방에 peer가 0이면 채팅방을 삭제
+    delete chattingRooms[chattingRoomId];
+  }
+}
+
 function getChattingRoomInformations() {
   let chattingRoomInformations = new Array();
   for (let chattingRoomId in chattingRooms) {
@@ -175,16 +206,16 @@ function getChattingRoomInformations() {
 function getPeerInformations(chattingRoomId) {
   let peersInformations = new Array();
   for (let i in chattingRooms[chattingRoomId]) { //채팅방에 접속한 peer들의 id를 얻어온다.
-    let peer = chattingRooms[chattingRoomId][i];
-    peersInformations.push({id : peer.id});
+    let peerConnection = chattingRooms[chattingRoomId][i];
+    peersInformations.push({id : peerConnection.id});
   }
   return peersInformations;
 }
 
 function findPeer(data, callBack) { //채팅방에 접속해있는 peer를 id로 찾아주는 메소드이다.
-  chattingRooms[data.chattingRoomId].forEach(function(peer) {
-    if (peer.id === data.otherId) {
-      callBack(peer.connection, data);
+  chattingRooms[data.chattingRoomId].forEach(function(peerConnection) {
+    if (peerConnection.id === data.otherId) {
+      callBack(peerConnection.connection, data);
     }
   });
 }

@@ -5,12 +5,12 @@
     <meta charset="utf-8">
     <script src="http://webrtc.github.io/adapter/adapter-latest.js"></script>
     <style>
-      video { width: 300px; height: 150px; }
+      video { width: 450px; height: 450px; }
     </style>
   </head>
   <body>
     <div id="join_div">
-      <input type="text" id="chatting_room_id" required>
+      <input type="text" id="chatting_room_id" size="30" placeholder="생성/참가할 방 이름을 입력해주세요." required>
       <button id="create_btn">방 만들기</button>
       <button id="join_btn">방 참여하기</button>
       <div>
@@ -19,10 +19,25 @@
       </div>
     </div>
     <div id="chatting_div" style="display: none;">
+      <div id="video_chatting_div">
+        <div>
+          <div>
+            나의 ID : <span id="local_id"></span>
+          </div>
+          <video id="local_video" autoplay muted></video>
+          <button onClick="blind('global')">화면 끄기</button>
+          <button onClick="mute('global')">소리 끄기</button>
+          <button id="exit_btn">채팅방 나가기</button>
+        </div>
+      </div>
       <div>
-        <video id="local_video" autoplay muted></video>
-        <button onClick="blind('global')">화면 끄기</button>
-        <button onClick="mute('global')">소리 끄기</button>
+        채팅창
+        <ul id="text_chatting_message_list">
+        </ul>
+        <div>
+          채팅 메시지 <input type="text" id="text_chatting_input" size="30" placeholder="채팅 메시지를 입력해주세요.">
+          <button id="text_chatting_send_btn">전송</button>
+        </div>
       </div>
     </div>
   </body>
