@@ -43,7 +43,6 @@ websocketServer.on('request', function (request) {
           handleAnswer(connection, data);
           break;
         case 'candidate' :
-          console.log(data);
           handleCandidate(data);
           break;
         case 'bitrate' :

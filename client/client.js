@@ -38,11 +38,11 @@ connection.onmessage = function(message) {
     case 'candidate' :
       handleCandidate(data); //offer/answer에 의해 description을 정상적으로 설정한 후 서로의 경로에 대한 candidate를 처리
       break;
-    case 'bitrate' :
+    case 'bitrate' : //bitrate 수신 값 조종 처리
       handleBitrate(data);
       break;
     case 'leave' :
-      handleleave(data); //다른 peer가 종료시 connection과 화면에서 없애주는 처리
+      handleLeave(data); //다른 peer가 종료시 connection과 화면에서 없애주는 처리
       break;
     case 'error' :
       handleServerMessage(data.message);
@@ -124,7 +124,6 @@ function handleConnect(data) {
 
 function handleCreate(data) { //채팅방 만들기 이벤트 후 결과를 받아 처리하는 함수
   init(); //방 만들기가 성공하면 설정을 초기화
-
 }
 
 async function handleJoin(data) {
@@ -214,7 +213,7 @@ function handleBitrate(data) {
   }, data.bitrate);
 }
 
-function handleleave(data) {
+function handleLeave(data) {
   deleteOtherPeerVideo('video_chatting_div', data.otherId); //peer video ui삭제
 
   findPeer(data, function(callBackData) {
@@ -300,17 +299,17 @@ function makePeerConnection(stream, otherId) {
     }
   }
 
-  newPeerConnection.oniceconnectionstatechange = function(event) {
+  newPeerConnection.oniceconnectionstatechange = function(event) { //상대 peer의 상태 체크
     document.getElementById('state_span_' + newPeerConnection.id).innerHTML = newPeerConnection.iceConnectionState;
   }
 
-  //out-band로 chatting channel을 연다.
+  //out-band로 data channel을 연다.
   let dataChannel = newPeerConnection.createDataChannel("chat", {negotiated : true, id : chattingRoomId});
   newPeerConnection.sendMessage = function(message) {
     dataChannel.send(JSON.stringify(message));
   }
 
-  dataChannel.onopen = function() {
+  dataChannel.onopen = function() { //data channel에 여는 것에 성공했을 때 보내는 메시지
     let message = {
       message : id + '님께서 입장하셨습니다.',
       id : id
