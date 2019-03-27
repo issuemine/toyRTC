@@ -3,7 +3,6 @@
   <head>
     <title>simple-webRTC</title>
     <meta charset="utf-8">
-    <script src="http://webrtc.github.io/adapter/adapter-latest.js"></script>
     <style>
       video { width: 450px; height: 450px; }
     </style>
@@ -25,8 +24,8 @@
             나의 ID : <span id="local_id"></span>
           </div>
           <video id="local_video" autoplay muted></video>
-          <button onClick="blind('global')">화면 끄기</button>
-          <button onClick="mute('global')">소리 끄기</button>
+          <button id="local_blind_btn">화면 끄기</button>
+          <button id="local_mute_btn">소리 끄기</button>
           <button id="exit_btn">채팅방 나가기</button>
         </div>
       </div>
@@ -41,5 +40,15 @@
       </div>
     </div>
   </body>
+  <script src="observer.js"></script>
+  <script src="model.js"></script>
+  <script src="view.js"></script>
   <script src="client.js"></script>
+  <script>
+    (function () {
+      let view = new View();
+      view.setClient(new Client(view, new Model()));
+      view.init();
+    })();
+  </script>
 </html>

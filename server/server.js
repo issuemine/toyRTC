@@ -108,11 +108,23 @@ function handleJoin(connection, data) {
   if (chattingRooms[data.chattingRoomId]) {
     let peerInformations = getPeerInformations(data.chattingRoomId); //새로운 참가자에게 보낼 채팅방 정보들
 
+    connection.chattingRoomId = data.chattingRoomId; //브라우저 종료시 connection 삭제를 위해 채팅방 이름을 저장
+    connection.id = data.id; //브라우저 종료시 connection 삭제를 위해 id를 저장
+
+    let isPeer = chattingRooms[data.chattingRoomId].find(function (peer) { //이미 존재하는 peer인지 찾는다.
+      return peer.id == data.id;
+    });
+
+    if (isPeer === null || isPeer === undefined) { //peer가 없다면, 처음 채팅방에 들어온 peer로 간주하여 connection을 저장한다.
+      chattingRooms[data.chattingRoomId].push({connection : connection, id : data.id}); //connection 저장(채팅방에 들어온 peer)
+    }
+
     sendTo(connection, {
       type : 'join',
       numberOfPeer : peerInformations.length, //peer들 수
       peerInformations : peerInformations
     });
+
   } else {
     sendTo(connection, {
       type : 'error',
@@ -122,17 +134,6 @@ function handleJoin(connection, data) {
 }
 
 function handleOffer(connection, data) {
-  connection.chattingRoomId = data.chattingRoomId; //브라우저 종료시 connection 삭제를 위해 채팅방 이름을 저장
-  connection.id = data.id; //브라우저 종료시 connection 삭제를 위해 id를 저장
-
-  let isPeer = chattingRooms[data.chattingRoomId].find(function (peer) { //이미 존재하는 peer인지 찾는다.
-    return peer.id == data.id;
-  });
-
-  if (isPeer === null || isPeer === undefined) { //peer가 없다면, 처음 채팅방에 들어온 peer로 간주하여 connection을 저장한다.
-    chattingRooms[data.chattingRoomId].push({connection : connection, id : data.id}); //connection 저장(채팅방에 들어온 peer)
-  }
-
   findPeer(data, function(connection, data) {
     sendTo(connection, {
       type : 'offer',
