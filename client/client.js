@@ -18,6 +18,7 @@ class Client {
     this.observer.register('oniceconnectionstatechange', this.setConnectionState, this);
     this.observer.register('onmessage', this.addTextChattingMessage, this);
     this.observer.register('deleteOtherPeerVideo', this.deleteOtherPeerVideo, this);
+    this.observer.register('connectFailTextChat', this.connectFailTextChat, this);
     this._initHandler();
   }
 
@@ -73,6 +74,10 @@ class Client {
   //observer에 의해 model에서 발생되는 이벤트 감지
   deleteOtherPeerVideo(otherId) { //다른 peer의 video 구역을 삭제
     this.view.deleteOtherPeerVideo(otherId);
+  }
+
+  connectFailTextChat() {
+    this.view.connectFailTextChat();
   }
 
   ////////////////////////////////////////////////////////////////////////////

@@ -316,7 +316,7 @@ class Model {
   }
 
   sendMessage(type, data) { //message를 만들어서 보낸다.
-    let message = {type : type};
+    let message = { type : type };
     for (let key in data) {
       message[key] = data[key];
     }
@@ -354,22 +354,26 @@ class Model {
 
   _createDataChannel(newPeerConnection) {
     let $this = this;
-    //out-band로 data channel을 연다.
-    let dataChannel = newPeerConnection.createDataChannel("chat", {negotiated : true, id : 1});
-    newPeerConnection.sendMessage = function(message) {
-      dataChannel.send(JSON.stringify(message));
-    }
+    try {
+      //out-band로 data channel을 연다.
+      let dataChannel = newPeerConnection.createDataChannel("chat", {negotiated : true, id : 1});
+      newPeerConnection.sendMessage = function(message) {
+        dataChannel.send(JSON.stringify(message));
+      }
 
-    dataChannel.onopen = function() { //data channel에 여는 것에 성공했을 때 보내는 메시지
-      let message = {
-        message : $this.id + '님께서 입장하셨습니다.',
-        id : $this.id
-      };
-      dataChannel.send(JSON.stringify(message));
-    }
+      dataChannel.onopen = function() { //data channel에 여는 것에 성공했을 때 보내는 메시지
+        let message = {
+          message : $this.id + '님께서 입장하셨습니다.',
+          id : $this.id
+        };
+        dataChannel.send(JSON.stringify(message));
+      }
 
-    dataChannel.onmessage = function(event) {
-      $this.observer.notify('onmessage', JSON.parse(event.data));
+      dataChannel.onmessage = function(event) {
+        $this.observer.notify('onmessage', JSON.parse(event.data));
+      }
+    } catch(e) {
+      $this.observer.notify('connectFailTextChat');
     }
   }
 }

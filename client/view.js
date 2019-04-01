@@ -104,7 +104,7 @@ class View {
 
     let idSpan = this._createElement('span', {}, peerId);
 
-    let stateSpan = this._createElement('span', {id : 'state_span_' + peerId});
+    let stateSpan = this._createElement('span', { id : 'state_span_' + peerId });
 
     let remoteIdDiv = this._createElement('div', {}, '상대방 ID : ' + idSpan.outerHTML + ' ' + stateSpan.outerHTML);
     remoteVideoDiv.appendChild(remoteIdDiv);
@@ -142,7 +142,7 @@ class View {
 
     let bitRateSpan = this._createElement('span', {}, 'bitrate');
 
-    let bitrateSlider = this._createElement('input', {type : 'range', min : 50, max : 1000, value : 500});
+    let bitrateSlider = this._createElement('input', { type : 'range', min : 50, max : 1000, value : 500 });
     bitrateSlider.oninput = function(event) {
       let bitRateValue = bitrateSlider.value;
       $this.client.controlBitrate(bitRateValue, peerId);
@@ -172,6 +172,10 @@ class View {
     let videoDiv = document.getElementById('video_chatting_div');
     let remoteVideoDiv = document.getElementById(otherId);
     videoDiv.removeChild(remoteVideoDiv);
+  }
+
+  connectFailTextChat() {
+    document.getElementById('text_chatting').innerHTML = '텍스트 채팅 접속에 실패하였습니다.';
   }
 
   alertMessage(message) {
